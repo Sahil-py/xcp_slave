@@ -53,7 +53,8 @@ def main() -> None:
     rx_id = int(args.rx_id, 16)
     tx_id = int(args.tx_id, 16)
 
-    session = XcpSession()
+    max_cto = 8 if args.no_fd else 64
+    session = XcpSession(max_cto=max_cto, max_dto=max_cto)
     memory = MemoryMap()
     dispatcher = XcpDispatcher(session, memory)
 

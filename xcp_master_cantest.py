@@ -150,7 +150,8 @@ def main():
         comm_mode  = resp[2]
         max_cto    = resp[3]
         byte_order = "Motorola/MSB_FIRST" if comm_mode & 0x80 else "Intel/LSB_FIRST"
-        print(f"            >> RESOURCE=0x{resource:02X}  COMM_MODE=0x{comm_mode:02X} ({byte_order})  MAX_CTO={max_cto}")
+        upload_chunk = max_cto - 1   # max bytes per UPLOAD (1 byte is PID)
+        print(f"            >> RESOURCE=0x{resource:02X}  COMM_MODE=0x{comm_mode:02X} ({byte_order})  MAX_CTO={max_cto}  upload_chunk={upload_chunk}")
 
         # -------------------------------------------------------- Step 2 GET_STATUS
         print("\n--- Step 2: GET_STATUS ---")
@@ -164,9 +165,16 @@ def main():
         assert_pos(resp, "GET_ID")
         length = struct.unpack_from("<I", resp, 4)[0]
         print(f"            >> LENGTH={length}")
-        resp2 = sr([CMD_UPLOAD, length], f"UPLOAD {length} bytes")
-        assert_pos(resp2, "UPLOAD ECU name")
-        ecu_name = resp2[1:1 + length].decode("ascii")
+        # Read ECU name in chunks — each UPLOAD is limited to MAX_CTO-1 bytes
+        name_bytes = b""
+        remaining = length
+        while remaining > 0:
+            n = min(remaining, upload_chunk)
+            r = sr([CMD_UPLOAD, n], f"UPLOAD {n} bytes (ECU name chunk)")
+            assert_pos(r, "UPLOAD ECU name chunk")
+            name_bytes += r[1:1 + n]
+            remaining -= n
+        ecu_name = name_bytes.decode("ascii")
         print(f"            >> ECU name = \"{ecu_name}\"")
 
         # -------------------------------------------------------- Step 4 SET_MTA EngineSpeed

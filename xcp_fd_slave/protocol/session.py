@@ -43,12 +43,12 @@ class XcpSession:
     STATUS_DAQ_RUNNING  = 0x08
     STATUS_RESUME       = 0x02
 
-    def __init__(self) -> None:
+    def __init__(self, max_cto: int = 64, max_dto: int = 64) -> None:
         self.connected: bool = False
 
         # Transport capabilities (reported in CONNECT response)
-        self.max_cto: int = 64
-        self.max_dto: int = 64
+        self.max_cto: int = max_cto
+        self.max_dto: int = max_dto
 
         # Available resources: CAL/PAG + DAQ
         self.resource_mask: int = self.RESOURCE_CAL_PAG | self.RESOURCE_DAQ
@@ -76,7 +76,7 @@ class XcpSession:
 
     def reset(self) -> None:
         """Reset to disconnected state, preserving no session data."""
-        self.__init__()
+        self.__init__(max_cto=self.max_cto, max_dto=self.max_dto)
 
     @property
     def daq_running(self) -> bool:
