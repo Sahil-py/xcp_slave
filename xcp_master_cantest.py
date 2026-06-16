@@ -221,20 +221,46 @@ def main():
 
         # -------------------------------------------------------- Step 10 configure DAQ
         print("\n--- Step 10: Configure DAQ (EngineSpeed + CoolantTemp) ---")
-        for pkt, label in [
-            ([CMD_FREE_DAQ],                                       "FREE_DAQ"),
-            ([CMD_ALLOC_DAQ, 0x00, 0x01, 0x00],                   "ALLOC_DAQ count=1"),
-            ([CMD_ALLOC_ODT, 0x00, 0x00, 0x00, 0x01],             "ALLOC_ODT list=0 count=1"),
-            ([CMD_ALLOC_ODT_ENTRY, 0x00, 0x00, 0x00, 0x00, 0x02], "ALLOC_ODT_ENTRY list=0 odt=0 entries=2"),
-            ([CMD_SET_DAQ_PTR, 0x00, 0x00, 0x00, 0x00, 0x00],     "SET_DAQ_PTR list=0 odt=0 entry=0"),
-        ]:
-            assert_pos(sr(pkt, label), label)
 
-        pkt = bytes([CMD_WRITE_DAQ, 0xFF, 0x04, 0x00]) + struct.pack("<I", ADDR_ENGINE_SPEED)
-        assert_pos(sr(pkt, "WRITE_DAQ entry0=EngineSpeed"), "WRITE_DAQ EngineSpeed")
+        if fd:
+            # CAN FD: both signals fit in one ODT → one 10-byte DTO per tick
+            print("  [CAN FD: 1 ODT, 2 entries, 10-byte DTO]")
+            for pkt, label in [
+                ([CMD_FREE_DAQ],                                       "FREE_DAQ"),
+                ([CMD_ALLOC_DAQ, 0x00, 0x01, 0x00],                   "ALLOC_DAQ count=1"),
+                ([CMD_ALLOC_ODT, 0x00, 0x00, 0x00, 0x01],             "ALLOC_ODT list=0 count=1"),
+                ([CMD_ALLOC_ODT_ENTRY, 0x00, 0x00, 0x00, 0x00, 0x02], "ALLOC_ODT_ENTRY list=0 odt=0 entries=2"),
+                ([CMD_SET_DAQ_PTR, 0x00, 0x00, 0x00, 0x00, 0x00],     "SET_DAQ_PTR list=0 odt=0 entry=0"),
+            ]:
+                assert_pos(sr(pkt, label), label)
 
-        pkt = bytes([CMD_WRITE_DAQ, 0xFF, 0x04, 0x00]) + struct.pack("<I", ADDR_COOLANT_TEMP)
-        assert_pos(sr(pkt, "WRITE_DAQ entry1=CoolantTemp"), "WRITE_DAQ CoolantTemp")
+            pkt = bytes([CMD_WRITE_DAQ, 0xFF, 0x04, 0x00]) + struct.pack("<I", ADDR_ENGINE_SPEED)
+            assert_pos(sr(pkt, "WRITE_DAQ entry0=EngineSpeed"), "WRITE_DAQ EngineSpeed")
+
+            pkt = bytes([CMD_WRITE_DAQ, 0xFF, 0x04, 0x00]) + struct.pack("<I", ADDR_COOLANT_TEMP)
+            assert_pos(sr(pkt, "WRITE_DAQ entry1=CoolantTemp"), "WRITE_DAQ CoolantTemp")
+
+        else:
+            # Classic CAN: max DTO = 8 bytes = 2 header + 6 data
+            # Each 4-byte signal needs its own ODT → 2 ODTs, 6-byte DTOs
+            print("  [Classic CAN: 2 ODTs, 1 entry each, 6-byte DTOs]")
+            for pkt, label in [
+                ([CMD_FREE_DAQ],                                             "FREE_DAQ"),
+                ([CMD_ALLOC_DAQ, 0x00, 0x01, 0x00],                         "ALLOC_DAQ count=1"),
+                ([CMD_ALLOC_ODT, 0x00, 0x00, 0x00, 0x02],                   "ALLOC_ODT list=0 count=2"),
+                ([CMD_ALLOC_ODT_ENTRY, 0x00, 0x00, 0x00, 0x00, 0x01],       "ALLOC_ODT_ENTRY list=0 odt=0 entries=1"),
+                ([CMD_ALLOC_ODT_ENTRY, 0x00, 0x00, 0x00, 0x01, 0x01],       "ALLOC_ODT_ENTRY list=0 odt=1 entries=1"),
+            ]:
+                assert_pos(sr(pkt, label), label)
+
+            for odt_idx, addr, sig in [
+                (0, ADDR_ENGINE_SPEED, "EngineSpeed"),
+                (1, ADDR_COOLANT_TEMP, "CoolantTemp"),
+            ]:
+                ptr = bytes([CMD_SET_DAQ_PTR, 0x00, 0x00, 0x00, odt_idx, 0x00])
+                assert_pos(sr(ptr, f"SET_DAQ_PTR list=0 odt={odt_idx} entry=0"), "SET_DAQ_PTR")
+                pkt = bytes([CMD_WRITE_DAQ, 0xFF, 0x04, 0x00]) + struct.pack("<I", addr)
+                assert_pos(sr(pkt, f"WRITE_DAQ odt{odt_idx}={sig}"), f"WRITE_DAQ {sig}")
 
         pkt = bytes([CMD_SET_DAQ_LIST_MODE, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00])
         assert_pos(sr(pkt, "SET_DAQ_LIST_MODE list=0 prescaler=1"), "SET_DAQ_LIST_MODE")
@@ -246,30 +272,59 @@ def main():
         print("            >> DAQ RUNNING — slave sends DTOs on 0x651")
 
         # -------------------------------------------------------- Step 12 capture DTOs
-        print("\n--- Step 12: Capture 10 DTO frames ---")
-        print(f"  {'#':<4}  {'Raw DTO bytes':<50}  EngineSpeed   CoolantTemp")
-        print(f"  {'-'*4}  {'-'*50}  {'-'*12}  {'-'*11}")
+        print("\n--- Step 12: Capture 10 DTO samples ---")
+
+        def is_dto(d):
+            """True if frame looks like a DTO (not a command response)."""
+            return len(d) >= 6 and d[0] not in (PID_RES, PID_ERR)
 
         collected = 0
         deadline  = time.monotonic() + 5.0
 
-        while collected < 10 and time.monotonic() < deadline:
-            rx = bus.recv(timeout=0.5)
-            if rx is None:
-                continue
-            if rx.arbitration_id != rx_id:
-                continue
-            d = bytes(rx.data)
-            if len(d) < 10 or d[0] in (PID_RES, PID_ERR):
-                continue
-            hex_str = " ".join(f"{b:02X}" for b in d)
-            speed   = struct.unpack_from(">I", d, 2)[0]
-            coolant = struct.unpack_from(">i", d, 6)[0]
-            print(f"  [{collected:2d}]  {hex_str:<50}  {speed:>7} rpm  {coolant / 10.0:>7.1f} °C")
-            collected += 1
+        if fd:
+            # CAN FD: one DTO per tick contains both signals
+            # Layout: [ODT(1), LIST(1), EngineSpeed(4), CoolantTemp(4)] = 10 bytes
+            print(f"  {'#':<4}  {'Raw DTO bytes':<52}  EngineSpeed   CoolantTemp")
+            print(f"  {'-'*4}  {'-'*52}  {'-'*12}  {'-'*11}")
+            while collected < 10 and time.monotonic() < deadline:
+                rx = bus.recv(timeout=0.5)
+                if rx is None or rx.arbitration_id != rx_id:
+                    continue
+                d = bytes(rx.data)
+                if not is_dto(d) or len(d) < 10:
+                    continue
+                hex_str = " ".join(f"{b:02X}" for b in d)
+                speed   = struct.unpack_from(">I", d, 2)[0]
+                coolant = struct.unpack_from(">i", d, 6)[0]
+                print(f"  [{collected:2d}]  {hex_str:<52}  {speed:>7} rpm  {coolant / 10.0:>7.1f} °C")
+                collected += 1
+        else:
+            # Classic CAN: two 6-byte DTOs per tick
+            # DTO0: [0x00, LIST, EngineSpeed(4)]  ODT num = 0
+            # DTO1: [0x01, LIST, CoolantTemp(4)]  ODT num = 1
+            print(f"  {'#':<4}  {'DTO0 [ODT=0 EngineSpeed]':<26}  {'DTO1 [ODT=1 CoolantTemp]':<26}  Speed    Coolant")
+            print(f"  {'-'*4}  {'-'*26}  {'-'*26}  {'-'*7}  {'-'*7}")
+            pending = {}   # odt_num → frame bytes
+            while collected < 10 and time.monotonic() < deadline:
+                rx = bus.recv(timeout=0.5)
+                if rx is None or rx.arbitration_id != rx_id:
+                    continue
+                d = bytes(rx.data)
+                if not is_dto(d):
+                    continue
+                odt_num = d[0]
+                pending[odt_num] = d
+                if 0 in pending and 1 in pending:
+                    d0, d1 = pending.pop(0), pending.pop(1)
+                    speed   = struct.unpack_from(">I", d0, 2)[0]
+                    coolant = struct.unpack_from(">i", d1, 2)[0]
+                    h0 = " ".join(f"{b:02X}" for b in d0)
+                    h1 = " ".join(f"{b:02X}" for b in d1)
+                    print(f"  [{collected:2d}]  {h0:<26}  {h1:<26}  {speed:>5} rpm  {coolant / 10.0:>5.1f} °C")
+                    collected += 1
 
         if collected < 10:
-            print(f"  !! Only received {collected}/10 DTOs within timeout")
+            print(f"  !! Only received {collected}/10 samples within timeout")
 
         # -------------------------------------------------------- DISCONNECT
         print("\n--- DISCONNECT ---")
