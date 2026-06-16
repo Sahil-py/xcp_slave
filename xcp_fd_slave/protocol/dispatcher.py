@@ -523,16 +523,26 @@ class XcpDispatcher:
         if ei >= len(odt.entries):
             return build_err(errors.ERR_SEQUENCE)
 
+        # Check that adding this entry won't make the DTO exceed MAX_DTO.
+        # DTO = 2-byte header + sum of all entry sizes in this ODT.
+        max_payload = self.session.max_dto - 2   # bytes available for data
+        existing = sum(e.size for i, e in enumerate(odt.entries) if i != ei and e.size > 0)
+        if existing + size > max_payload:
+            log.warning(
+                "WRITE_DAQ rejected: ODT payload would be %d bytes, MAX_DTO=%d allows %d data bytes",
+                existing + size, self.session.max_dto, max_payload,
+            )
+            return build_err(errors.ERR_OUT_OF_RANGE)
+
         entry = odt.entries[ei]
         entry.address = address
         entry.address_extension = addr_ext
         entry.bit_offset = bit_offset
         entry.size = size
 
-        log.debug("WRITE_DAQ list=%d odt=%d entry=%d → addr=0x%08X size=%d",
-                  li, oi, ei, address, size)
+        log.debug("WRITE_DAQ list=%d odt=%d entry=%d → addr=0x%08X size=%d  (payload=%d/%d)",
+                  li, oi, ei, address, size, existing + size, max_payload)
 
-        # Advance pointer to next entry
         self.session.daq_ptr_entry += 1
         return build_res()
 
@@ -660,10 +670,18 @@ class XcpDispatcher:
 
     def _build_dto(self, list_idx: int, odt_idx: int, odt: Odt) -> Optional[bytes]:
         """Build one DTO packet for the given ODT; return None on error."""
+        max_payload = self.session.max_dto - 2   # bytes available after 2-byte header
         payload = bytearray()
         for entry in odt.entries:
             if entry.size == 0:
                 continue
+            if len(payload) + entry.size > max_payload:
+                log.error(
+                    "DTO payload overflow: entry size=%d would exceed max_dto=%d "
+                    "(already %d bytes). Configure fewer/smaller entries per ODT.",
+                    entry.size, self.session.max_dto, len(payload),
+                )
+                return None
             try:
                 raw = self.memory.read(entry.address, entry.size)
             except ValueError:
