@@ -110,8 +110,9 @@ class XcpSlaveTransport:
                 continue
             if msg.arbitration_id != self._rx_id or msg.is_extended_id:
                 continue
+            log.info("RX 0x%03X [%d] %s  (fd=%s)", msg.arbitration_id, len(msg.data), bytes(msg.data).hex(), msg.is_fd)
             if self._fd and not msg.is_fd:
-                log.warning("Received classic CAN frame on FD bus — consider --no-fd")
+                log.warning("RX classic CAN frame on FD bus — slave will reply as FD; if TX fails use --no-fd")
 
             response = dispatcher.process(bytes(msg.data))
             if response is not None:
@@ -139,6 +140,7 @@ class XcpSlaveTransport:
                 data=data,
             )
             self._bus.send(msg)
-            log.debug("TX 0x%03X [%d] %s", self._tx_id, len(data), data.hex())
+            log.info("TX 0x%03X [%d] %s  (fd=%s)", self._tx_id, len(data), data.hex(), self._fd)
         except can.CanOperationError as exc:
-            log.error("CAN send error: %s", exc)
+            log.error("TX FAILED 0x%03X [%d] %s  fd=%s  error=%s",
+                      self._tx_id, len(data), data.hex(), self._fd, exc)
