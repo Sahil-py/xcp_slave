@@ -1,0 +1,144 @@
+ASAP2_VERSION 1 61
+
+/begin PROJECT XCPFDTestSlave "XCP FD CAN Slave Simulator"
+
+  /begin HEADER "XCP FD Test Slave A2L"
+    VERSION "1.0.0"
+    PROJECT_NO XCP_FD_001
+  /end HEADER
+
+  /begin MODULE XCP_SLAVE "ECU Memory Map"
+
+    /begin MOD_COMMON ""
+      DEPOSIT    ABSOLUTE
+      BYTE_ORDER MSB_LAST
+      ALIGNMENT_BYTE    1
+      ALIGNMENT_WORD    2
+      ALIGNMENT_LONG    4
+      ALIGNMENT_FLOAT32_IEEE 4
+    /end MOD_COMMON
+
+    /begin MOD_PAR ""
+      VERSION "1.0"
+      /begin MEMORY_LAYOUT PRG_DATA
+        ADDRESS 0x00001000
+        SIZE    0x00008014
+        OFFSET  0 0 0 0 0
+      /end MEMORY_LAYOUT
+    /end MOD_PAR
+
+    ;---------------------------------------------------------------------------
+    ; Record layouts
+    ;---------------------------------------------------------------------------
+
+    /begin RECORD_LAYOUT FLOAT32_DIRECT
+      FNC_VALUES 1 FLOAT32_IEEE ROW_DIR DIRECT
+    /end RECORD_LAYOUT
+
+    ;---------------------------------------------------------------------------
+    ; Conversion methods
+    ;---------------------------------------------------------------------------
+
+    /begin COMPU_METHOD RPM_CONV "Revolutions per minute"
+      IDENTICAL "%7.1" "rpm"
+      COEFFS_LINEAR 1 0
+    /end COMPU_METHOD
+
+    /begin COMPU_METHOD PERCENT_CONV "Percentage 0..100"
+      IDENTICAL "%6.2" "%"
+      COEFFS_LINEAR 1 0
+    /end COMPU_METHOD
+
+    /begin COMPU_METHOD TEMP_CONV "Temperature in Celsius"
+      IDENTICAL "%6.1" "degC"
+      COEFFS_LINEAR 1 0
+    /end COMPU_METHOD
+
+    /begin COMPU_METHOD SPEED_CONV "Vehicle speed km/h"
+      IDENTICAL "%6.1" "km/h"
+      COEFFS_LINEAR 1 0
+    /end COMPU_METHOD
+
+    /begin COMPU_METHOD NM_CONV "Torque in Newton-metres"
+      IDENTICAL "%7.1" "Nm"
+      COEFFS_LINEAR 1 0
+    /end COMPU_METHOD
+
+    ;---------------------------------------------------------------------------
+    ; Measurement variables  (read-only runtime values)
+    ;---------------------------------------------------------------------------
+
+    /begin MEASUREMENT EngineSpeed "Engine crankshaft speed"
+      FLOAT32_IEEE
+      RPM_CONV
+      1 0.5
+      0.0 8000.0
+      ECU_ADDRESS 0x00001000
+    /end MEASUREMENT
+
+    /begin MEASUREMENT EngineLoad "Engine load factor"
+      FLOAT32_IEEE
+      PERCENT_CONV
+      1 0.1
+      0.0 100.0
+      ECU_ADDRESS 0x00001004
+    /end MEASUREMENT
+
+    /begin MEASUREMENT ThrottlePosition "Throttle pedal position"
+      FLOAT32_IEEE
+      PERCENT_CONV
+      1 0.1
+      0.0 100.0
+      ECU_ADDRESS 0x00001008
+    /end MEASUREMENT
+
+    /begin MEASUREMENT CoolantTemp "Engine coolant temperature"
+      FLOAT32_IEEE
+      TEMP_CONV
+      1 0.1
+      -40.0 130.0
+      ECU_ADDRESS 0x00002000
+    /end MEASUREMENT
+
+    /begin MEASUREMENT VehicleSpeed "Vehicle longitudinal speed"
+      FLOAT32_IEEE
+      SPEED_CONV
+      1 0.1
+      0.0 250.0
+      ECU_ADDRESS 0x00003000
+    /end MEASUREMENT
+
+    ;---------------------------------------------------------------------------
+    ; Calibration parameters  (read/write)
+    ;---------------------------------------------------------------------------
+
+    /begin CHARACTERISTIC MaxEngineSpeed "Maximum permitted engine speed"
+      VALUE
+      0x00008000
+      FLOAT32_DIRECT
+      0
+      RPM_CONV
+      0.0 10000.0
+    /end CHARACTERISTIC
+
+    /begin CHARACTERISTIC IdleTargetSpeed "Target idle speed setpoint"
+      VALUE
+      0x00008008
+      FLOAT32_DIRECT
+      0
+      RPM_CONV
+      600.0 2000.0
+    /end CHARACTERISTIC
+
+    /begin CHARACTERISTIC TorqueLimit "Maximum output torque limit"
+      VALUE
+      0x00008010
+      FLOAT32_DIRECT
+      0
+      NM_CONV
+      0.0 500.0
+    /end CHARACTERISTIC
+
+  /end MODULE
+
+/end PROJECT

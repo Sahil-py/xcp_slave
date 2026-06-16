@@ -1,0 +1,635 @@
+ASAP2_VERSION 1 61
+
+/begin PROJECT CANdoit_Test "CANdoit Test ECU"
+
+  /begin HEADER "CANdoit Meas and Cal Test A2L"
+    VERSION "1.0.0"
+  /end HEADER
+
+  /begin MODULE Engine_ECU "Test Engine ECU"
+
+    /begin MOD_COMMON ""
+      BYTE_ORDER MSB_FIRST
+      ALIGNMENT_BYTE 1
+      ALIGNMENT_WORD 2
+      ALIGNMENT_LONG 4
+      ALIGNMENT_FLOAT32_IEEE 4
+    /end MOD_COMMON
+
+    /begin RECORD_LAYOUT FLOAT32_SCALAR
+      FNC_VALUES 1 FLOAT32_IEEE ROW_DIR DIRECT
+    /end RECORD_LAYOUT
+
+    /* ================================================================
+       MEASUREMENTS  (read-only signals — drag onto Measurements canvas)
+       Format: FLOAT32_IEEE  NO_COMPU_METHOD  resolution  accuracy  low  high
+       ================================================================ */
+
+    /begin MEASUREMENT EngineSpeed
+      "Crankshaft rotational speed"
+      ULONG
+      NO_COMPU_METHOD
+      1
+      0
+      0
+      8000
+      ECU_ADDRESS 0x00001000
+      PHYS_UNIT "rpm"
+    /end MEASUREMENT
+
+    /begin MEASUREMENT EngineLoad
+      "Normalized engine load"
+      ULONG
+      NO_COMPU_METHOD
+      1
+      0
+      0
+      100
+      ECU_ADDRESS 0x00001004
+      PHYS_UNIT "%"
+    /end MEASUREMENT
+
+    /begin MEASUREMENT InjectionTime
+      "Fuel injector pulse width"
+      ULONG
+      NO_COMPU_METHOD
+      1
+      0
+      0
+      25000
+      ECU_ADDRESS 0x00001008
+      PHYS_UNIT "us"
+    /end MEASUREMENT
+
+    /begin MEASUREMENT IgnitionAngle
+      "Spark advance angle before TDC"
+      SLONG
+      NO_COMPU_METHOD
+      1
+      0
+      -100
+      550
+      ECU_ADDRESS 0x0000100C
+      PHYS_UNIT "0.1 deg BTDC"
+    /end MEASUREMENT
+
+    /begin MEASUREMENT ThrottlePosition
+      "Electronic throttle plate opening"
+      ULONG
+      NO_COMPU_METHOD
+      1
+      0
+      0
+      100
+      ECU_ADDRESS 0x00001010
+      PHYS_UNIT "%"
+    /end MEASUREMENT
+
+    /begin MEASUREMENT EngineTorque
+      "Calculated output torque at crankshaft"
+      ULONG
+      NO_COMPU_METHOD
+      1
+      0
+      0
+      4500
+      ECU_ADDRESS 0x00001014
+      PHYS_UNIT "0.1 Nm"
+    /end MEASUREMENT
+
+    /begin MEASUREMENT MassAirFlow
+      "Hot-wire MAF sensor output"
+      ULONG
+      NO_COMPU_METHOD
+      1
+      0
+      0
+      60000
+      ECU_ADDRESS 0x00001018
+      PHYS_UNIT "0.01 g/s"
+    /end MEASUREMENT
+
+    /begin MEASUREMENT ManifoldPressure
+      "Intake manifold absolute pressure"
+      ULONG
+      NO_COMPU_METHOD
+      1
+      0
+      200
+      3000
+      ECU_ADDRESS 0x0000101C
+      PHYS_UNIT "0.1 kPa"
+    /end MEASUREMENT
+
+    /begin MEASUREMENT CoolantTemp
+      "Engine coolant temperature"
+      SLONG
+      NO_COMPU_METHOD
+      1
+      0
+      -400
+      1300
+      ECU_ADDRESS 0x00002000
+      PHYS_UNIT "0.1 deg C"
+    /end MEASUREMENT
+
+    /begin MEASUREMENT OilTemp
+      "Engine oil sump temperature"
+      SLONG
+      NO_COMPU_METHOD
+      1
+      0
+      -400
+      1600
+      ECU_ADDRESS 0x00002004
+      PHYS_UNIT "0.1 deg C"
+    /end MEASUREMENT
+
+    /begin MEASUREMENT IntakeAirTemp
+      "Intake manifold air temperature"
+      SLONG
+      NO_COMPU_METHOD
+      1
+      0
+      -400
+      800
+      ECU_ADDRESS 0x00002008
+      PHYS_UNIT "0.1 deg C"
+    /end MEASUREMENT
+
+    /begin MEASUREMENT ExhaustGasTemp
+      "Pre-catalyst exhaust gas temperature"
+      ULONG
+      NO_COMPU_METHOD
+      1
+      0
+      0
+      9000
+      ECU_ADDRESS 0x0000200C
+      PHYS_UNIT "0.1 deg C"
+    /end MEASUREMENT
+
+    /begin MEASUREMENT TransmissionTemp
+      "Automatic gearbox fluid temperature"
+      SLONG
+      NO_COMPU_METHOD
+      1
+      0
+      -400
+      1400
+      ECU_ADDRESS 0x00002010
+      PHYS_UNIT "0.1 deg C"
+    /end MEASUREMENT
+
+    /begin MEASUREMENT VehicleSpeed
+      "Vehicle longitudinal speed"
+      ULONG
+      NO_COMPU_METHOD
+      1
+      0
+      0
+      2800
+      ECU_ADDRESS 0x00003000
+      PHYS_UNIT "0.1 km/h"
+    /end MEASUREMENT
+
+    /begin MEASUREMENT WheelSpeedFL
+      "Front-left wheel speed"
+      ULONG
+      NO_COMPU_METHOD
+      1
+      0
+      0
+      2800
+      ECU_ADDRESS 0x00003004
+      PHYS_UNIT "0.1 km/h"
+    /end MEASUREMENT
+
+    /begin MEASUREMENT WheelSpeedFR
+      "Front-right wheel speed"
+      ULONG
+      NO_COMPU_METHOD
+      1
+      0
+      0
+      2800
+      ECU_ADDRESS 0x00003008
+      PHYS_UNIT "0.1 km/h"
+    /end MEASUREMENT
+
+    /begin MEASUREMENT WheelSpeedRL
+      "Rear-left wheel speed"
+      ULONG
+      NO_COMPU_METHOD
+      1
+      0
+      0
+      2800
+      ECU_ADDRESS 0x0000300C
+      PHYS_UNIT "0.1 km/h"
+    /end MEASUREMENT
+
+    /begin MEASUREMENT WheelSpeedRR
+      "Rear-right wheel speed"
+      ULONG
+      NO_COMPU_METHOD
+      1
+      0
+      0
+      2800
+      ECU_ADDRESS 0x00003010
+      PHYS_UNIT "0.1 km/h"
+    /end MEASUREMENT
+
+    /begin MEASUREMENT LongAcceleration
+      "Longitudinal acceleration from IMU"
+      SLONG
+      NO_COMPU_METHOD
+      1
+      0
+      -2000
+      2000
+      ECU_ADDRESS 0x00003014
+      PHYS_UNIT "0.01 m/s2"
+    /end MEASUREMENT
+
+    /begin MEASUREMENT LatAcceleration
+      "Lateral acceleration from IMU"
+      SLONG
+      NO_COMPU_METHOD
+      1
+      0
+      -1500
+      1500
+      ECU_ADDRESS 0x00003018
+      PHYS_UNIT "0.01 m/s2"
+    /end MEASUREMENT
+
+    /begin MEASUREMENT YawRate
+      "Vehicle yaw rate from gyroscope"
+      SLONG
+      NO_COMPU_METHOD
+      1
+      0
+      -1500
+      1500
+      ECU_ADDRESS 0x0000301C
+      PHYS_UNIT "0.1 deg/s"
+    /end MEASUREMENT
+
+    /begin MEASUREMENT FuelRailPressure
+      "High-pressure fuel rail pressure"
+      ULONG
+      NO_COMPU_METHOD
+      1
+      0
+      0
+      2200
+      ECU_ADDRESS 0x00004000
+      PHYS_UNIT "0.1 bar"
+    /end MEASUREMENT
+
+    /begin MEASUREMENT LambdaSensor1
+      "Wideband lambda sensor bank 1"
+      ULONG
+      NO_COMPU_METHOD
+      1
+      0
+      500
+      2000
+      ECU_ADDRESS 0x00004004
+      PHYS_UNIT "0.001 lambda"
+    /end MEASUREMENT
+
+    /begin MEASUREMENT LambdaSensor2
+      "Narrowband lambda sensor bank 2"
+      ULONG
+      NO_COMPU_METHOD
+      1
+      0
+      500
+      1500
+      ECU_ADDRESS 0x00004008
+      PHYS_UNIT "0.001 lambda"
+    /end MEASUREMENT
+
+    /begin MEASUREMENT FuelTankLevel
+      "Resistive fuel level sender"
+      ULONG
+      NO_COMPU_METHOD
+      1
+      0
+      0
+      100
+      ECU_ADDRESS 0x0000400C
+      PHYS_UNIT "%"
+    /end MEASUREMENT
+
+    /begin MEASUREMENT FuelConsumption
+      "Instantaneous fuel consumption rate"
+      ULONG
+      NO_COMPU_METHOD
+      1
+      0
+      0
+      500
+      ECU_ADDRESS 0x00004010
+      PHYS_UNIT "0.1 l/100km"
+    /end MEASUREMENT
+
+    /begin MEASUREMENT BatteryVoltage
+      "12V lead-acid battery terminal voltage"
+      ULONG
+      NO_COMPU_METHOD
+      1
+      0
+      800
+      1600
+      ECU_ADDRESS 0x00005000
+      PHYS_UNIT "0.01 V"
+    /end MEASUREMENT
+
+    /begin MEASUREMENT BatteryCurrent
+      "Battery charge and discharge current"
+      SLONG
+      NO_COMPU_METHOD
+      1
+      0
+      -2500
+      2500
+      ECU_ADDRESS 0x00005004
+      PHYS_UNIT "0.1 A"
+    /end MEASUREMENT
+
+    /begin MEASUREMENT AlternatorVoltage
+      "Alternator regulated output voltage"
+      ULONG
+      NO_COMPU_METHOD
+      1
+      0
+      1100
+      1550
+      ECU_ADDRESS 0x00005008
+      PHYS_UNIT "0.01 V"
+    /end MEASUREMENT
+
+    /begin MEASUREMENT ECUSupplyVoltage
+      "ECU internal 5V reference rail"
+      ULONG
+      NO_COMPU_METHOD
+      1
+      0
+      4500
+      5500
+      ECU_ADDRESS 0x0000500C
+      PHYS_UNIT "0.001 V"
+    /end MEASUREMENT
+
+    /* ================================================================
+       CHARACTERISTICS  (calibration parameters — shown in Cal tab)
+       Format: VALUE  address  FLOAT32_SCALAR  max_diff  NO_COMPU_METHOD  low  high
+       ================================================================ */
+
+    /begin CHARACTERISTIC MaxEngineSpeed
+      "Absolute engine speed limit hard cut"
+      VALUE
+      0x00008000
+      FLOAT32_SCALAR
+      0.0
+      NO_COMPU_METHOD
+      5000.0
+      9000.0
+      PHYS_UNIT "rpm"
+    /end CHARACTERISTIC
+
+    /begin CHARACTERISTIC RevLimiterCutIn
+      "Soft rev limiter activation speed"
+      VALUE
+      0x00008004
+      FLOAT32_SCALAR
+      0.0
+      NO_COMPU_METHOD
+      4500.0
+      8500.0
+      PHYS_UNIT "rpm"
+    /end CHARACTERISTIC
+
+    /begin CHARACTERISTIC IdleTargetSpeed
+      "Warm idle speed setpoint"
+      VALUE
+      0x00008008
+      FLOAT32_SCALAR
+      0.0
+      NO_COMPU_METHOD
+      600.0
+      950.0
+      PHYS_UNIT "rpm"
+    /end CHARACTERISTIC
+
+    /begin CHARACTERISTIC IdleTargetSpeedCold
+      "Cold start idle speed at minus 20 deg C"
+      VALUE
+      0x0000800C
+      FLOAT32_SCALAR
+      0.0
+      NO_COMPU_METHOD
+      900.0
+      1500.0
+      PHYS_UNIT "rpm"
+    /end CHARACTERISTIC
+
+    /begin CHARACTERISTIC TorqueLimit
+      "Peak torque output limit"
+      VALUE
+      0x00008010
+      FLOAT32_SCALAR
+      0.0
+      NO_COMPU_METHOD
+      0.0
+      500.0
+      PHYS_UNIT "Nm"
+    /end CHARACTERISTIC
+
+    /begin CHARACTERISTIC IgnitionAdvanceBase
+      "Base ignition advance at stoichiometric"
+      VALUE
+      0x00008014
+      FLOAT32_SCALAR
+      0.0
+      NO_COMPU_METHOD
+      0.0
+      45.0
+      PHYS_UNIT "deg BTDC"
+    /end CHARACTERISTIC
+
+    /begin CHARACTERISTIC InjectorFlowRate
+      "Injector static flow rate at 3 bar"
+      VALUE
+      0x00008018
+      FLOAT32_SCALAR
+      0.0
+      NO_COMPU_METHOD
+      200.0
+      800.0
+      PHYS_UNIT "cc/min"
+    /end CHARACTERISTIC
+
+    /begin CHARACTERISTIC InjectorDeadTime
+      "Injector electrical opening delay at 14V"
+      VALUE
+      0x0000801C
+      FLOAT32_SCALAR
+      0.0
+      NO_COMPU_METHOD
+      0.0
+      2.0
+      PHYS_UNIT "ms"
+    /end CHARACTERISTIC
+
+    /begin CHARACTERISTIC TargetLambdaIdle
+      "Closed-loop lambda target at idle"
+      VALUE
+      0x00008020
+      FLOAT32_SCALAR
+      0.0
+      NO_COMPU_METHOD
+      0.95
+      1.05
+      PHYS_UNIT "lambda"
+    /end CHARACTERISTIC
+
+    /begin CHARACTERISTIC TargetLambdaWOT
+      "Open-loop lambda target at full load"
+      VALUE
+      0x00008024
+      FLOAT32_SCALAR
+      0.0
+      NO_COMPU_METHOD
+      0.80
+      0.98
+      PHYS_UNIT "lambda"
+    /end CHARACTERISTIC
+
+    /begin CHARACTERISTIC FuelPumpDuty
+      "In-tank fuel pump PWM duty cycle"
+      VALUE
+      0x00008028
+      FLOAT32_SCALAR
+      0.0
+      NO_COMPU_METHOD
+      50.0
+      100.0
+      PHYS_UNIT "%"
+    /end CHARACTERISTIC
+
+    /begin CHARACTERISTIC CrankingFuelEnrichment
+      "Cold-start cranking enrichment factor"
+      VALUE
+      0x0000802C
+      FLOAT32_SCALAR
+      0.0
+      NO_COMPU_METHOD
+      100.0
+      250.0
+      PHYS_UNIT "%"
+    /end CHARACTERISTIC
+
+    /begin CHARACTERISTIC FanOnTemp
+      "Radiator fan primary switch-on temperature"
+      VALUE
+      0x00008030
+      FLOAT32_SCALAR
+      0.0
+      NO_COMPU_METHOD
+      85.0
+      105.0
+      PHYS_UNIT "deg C"
+    /end CHARACTERISTIC
+
+    /begin CHARACTERISTIC FanOffTemp
+      "Radiator fan switch-off hysteresis temperature"
+      VALUE
+      0x00008034
+      FLOAT32_SCALAR
+      0.0
+      NO_COMPU_METHOD
+      75.0
+      98.0
+      PHYS_UNIT "deg C"
+    /end CHARACTERISTIC
+
+    /begin CHARACTERISTIC OilTempWarning
+      "Oil over-temperature warning threshold"
+      VALUE
+      0x00008038
+      FLOAT32_SCALAR
+      0.0
+      NO_COMPU_METHOD
+      120.0
+      150.0
+      PHYS_UNIT "deg C"
+    /end CHARACTERISTIC
+
+    /begin CHARACTERISTIC CoolantTempWarning
+      "Coolant over-temperature warning threshold"
+      VALUE
+      0x0000803C
+      FLOAT32_SCALAR
+      0.0
+      NO_COMPU_METHOD
+      105.0
+      130.0
+      PHYS_UNIT "deg C"
+    /end CHARACTERISTIC
+
+    /begin CHARACTERISTIC ColdStartTempThreshold
+      "Below this temperature cold-start strategy activates"
+      VALUE
+      0x00008040
+      FLOAT32_SCALAR
+      0.0
+      NO_COMPU_METHOD
+      10.0
+      40.0
+      PHYS_UNIT "deg C"
+    /end CHARACTERISTIC
+
+    /begin CHARACTERISTIC BatteryLowVoltageThreshold
+      "Battery undervoltage warning level"
+      VALUE
+      0x00008044
+      FLOAT32_SCALAR
+      0.0
+      NO_COMPU_METHOD
+      10.0
+      12.0
+      PHYS_UNIT "V"
+    /end CHARACTERISTIC
+
+    /begin CHARACTERISTIC AlternatorTargetVoltage
+      "Alternator voltage regulator setpoint"
+      VALUE
+      0x00008048
+      FLOAT32_SCALAR
+      0.0
+      NO_COMPU_METHOD
+      13.0
+      15.0
+      PHYS_UNIT "V"
+    /end CHARACTERISTIC
+
+    /begin CHARACTERISTIC MaxFuelRailPressure
+      "Fuel rail maximum pressure limit"
+      VALUE
+      0x0000804C
+      FLOAT32_SCALAR
+      0.0
+      NO_COMPU_METHOD
+      100.0
+      220.0
+      PHYS_UNIT "bar"
+    /end CHARACTERISTIC
+
+  /end MODULE
+
+/end PROJECT
