@@ -68,11 +68,13 @@ class XcpSlaveTransport:
             bus_kwargs["fd"] = True
             bus_kwargs["data_bitrate"] = self._data_bitrate
         self._bus = can.Bus(**bus_kwargs)
-        log.info(
-            "CAN %s bus opened: %s/%s  RX=0x%03X  TX=0x%03X",
-            "FD" if self._fd else "classic",
-            self._interface, self._channel, self._rx_id, self._tx_id,
-        )
+        mode = "FD" if self._fd else "classic"
+        log.info("CAN %s bus opened: %s/%s  RX=0x%03X  TX=0x%03X", mode,
+                 self._interface, self._channel, self._rx_id, self._tx_id)
+        if self._fd:
+            log.info("FD mode: interface must be up with 'fd on dbitrate %d'", self._data_bitrate)
+        else:
+            log.info("Classic CAN mode: MAX_CTO=8, DTOs max 8 bytes, 2 ODTs per DAQ list")
 
         self._stop_event.clear()
         self._daq_thread = threading.Thread(
