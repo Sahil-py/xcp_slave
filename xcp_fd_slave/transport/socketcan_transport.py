@@ -110,9 +110,11 @@ class XcpSlaveTransport:
 
             if msg is None:
                 continue
-            if msg.arbitration_id != self._rx_id or msg.is_extended_id:
+            if msg.arbitration_id != self._rx_id:
                 continue
-            log.info("RX 0x%03X [%d] %s  (fd=%s)", msg.arbitration_id, len(msg.data), bytes(msg.data).hex(), msg.is_fd)
+            log.info("RX 0x%03X [%d] %s  (fd=%s ext=%s)",
+                     msg.arbitration_id, len(msg.data), bytes(msg.data).hex(),
+                     msg.is_fd, msg.is_extended_id)
             if self._fd and not msg.is_fd:
                 log.warning("RX classic CAN frame on FD bus — slave will reply as FD; if TX fails use --no-fd")
 
