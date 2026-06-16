@@ -40,6 +40,7 @@ class XcpSlaveTransport:
         tx_id: int = 0x651,
         bitrate: int = 500_000,
         data_bitrate: int = 2_000_000,
+        fd: bool = True,
     ) -> None:
         self._interface = interface
         self._channel = channel
@@ -47,6 +48,7 @@ class XcpSlaveTransport:
         self._tx_id = tx_id
         self._bitrate = bitrate
         self._data_bitrate = data_bitrate
+        self._fd = fd
         self._bus: can.Bus | None = None
         self._stop_event = threading.Event()
         self._daq_thread: threading.Thread | None = None
@@ -57,15 +59,18 @@ class XcpSlaveTransport:
 
     def run(self, dispatcher: XcpDispatcher) -> None:
         """Open the CAN interface and block until stop() is called."""
-        self._bus = can.Bus(
+        bus_kwargs: dict = dict(
             interface=self._interface,
             channel=self._channel,
-            fd=True,
             bitrate=self._bitrate,
-            data_bitrate=self._data_bitrate,
         )
+        if self._fd:
+            bus_kwargs["fd"] = True
+            bus_kwargs["data_bitrate"] = self._data_bitrate
+        self._bus = can.Bus(**bus_kwargs)
         log.info(
-            "CAN FD bus opened: %s/%s  RX=0x%03X  TX=0x%03X",
+            "CAN %s bus opened: %s/%s  RX=0x%03X  TX=0x%03X",
+            "FD" if self._fd else "classic",
             self._interface, self._channel, self._rx_id, self._tx_id,
         )
 
@@ -105,6 +110,8 @@ class XcpSlaveTransport:
                 continue
             if msg.arbitration_id != self._rx_id or msg.is_extended_id:
                 continue
+            if self._fd and not msg.is_fd:
+                log.warning("Received classic CAN frame on FD bus — consider --no-fd")
 
             response = dispatcher.process(bytes(msg.data))
             if response is not None:
@@ -127,8 +134,8 @@ class XcpSlaveTransport:
             msg = can.Message(
                 arbitration_id=self._tx_id,
                 is_extended_id=False,
-                is_fd=True,
-                bitrate_switch=True,
+                is_fd=self._fd,
+                bitrate_switch=self._fd,
                 data=data,
             )
             self._bus.send(msg)

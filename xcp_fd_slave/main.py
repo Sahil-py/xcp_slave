@@ -34,6 +34,8 @@ def _build_args() -> argparse.Namespace:
                    help="Nominal CAN bitrate (bps)")
     p.add_argument("--data-bitrate", type=int, default=2_000_000,
                    help="CAN FD data phase bitrate (bps)")
+    p.add_argument("--no-fd", action="store_true",
+                   help="Use classic CAN frames instead of CAN FD (for non-FD masters)")
     p.add_argument("--log-level", default="INFO",
                    choices=["DEBUG", "INFO", "WARNING", "ERROR"])
     return p.parse_args()
@@ -62,6 +64,7 @@ def main() -> None:
         tx_id=tx_id,
         bitrate=args.bitrate,
         data_bitrate=args.data_bitrate,
+        fd=not args.no_fd,
     )
 
     def _handle_signal(sig: int, frame: object) -> None:
